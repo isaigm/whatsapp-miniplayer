@@ -18,11 +18,12 @@ import java.util.Locale
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 
 class MainActivity : AppCompatActivity() {
     private lateinit var btnSortByDate: Button
-
-    private lateinit var listView: ListView
+    private lateinit var listView: RecyclerView
     private val voiceNotes = mutableListOf<File>()
     private var currentlyPlayingPosition = -1
     private lateinit var adapter: VoiceNoteAdapter
@@ -45,15 +46,12 @@ class MainActivity : AppCompatActivity() {
     private var pendingRestorePosition: Int = NO_POSITION
     private var pendingMiniPlayerVisibility: Int = View.GONE
     private var noteVoiceLooped: Boolean = false
-
     enum class ORDER(val value: Int) {
         ASC(1), DESC(2);
-
         companion object {
             fun valueOf(value: Int) = entries.find { it.value == value }
         }
     }
-
     private var currOrder = ORDER.DESC
 
     private var hasPendingStateToRestore: Boolean = false
@@ -90,10 +88,8 @@ class MainActivity : AppCompatActivity() {
                             seekBar.progress = seekBar.max
                         }
                         updateSeekBar.removeCallbacks(updateRunnable)
-
                     }
                 }
-
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     audioService?.exoPlayer?.let { player ->
                         if (isPlaying) {
@@ -157,11 +153,13 @@ class MainActivity : AppCompatActivity() {
         txtCurrentTime = findViewById(R.id.txtCurrentTime)
         txtTotalTime = findViewById(R.id.txtTotalTime)
         btnSortByDate = findViewById(R.id.btnSortByDate)
+        var linearLayoutManager = LinearLayoutManager(this)
+        listView.setLayoutManager(linearLayoutManager)
 
         btnSortByDate.setOnClickListener {
             toggleSortOrder()
         }
-        adapter = VoiceNoteAdapter(this, voiceNotes)
+        adapter = VoiceNoteAdapter(voiceNotes, onItemClick = { file, position -> togglePlayback(position) })
         listView.adapter = adapter
 
         // Iniciar y vincular el servicio
@@ -199,9 +197,7 @@ class MainActivity : AppCompatActivity() {
             updateLoopButtonTint()
 
         }
-        listView.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
-            togglePlayback(position)
-        }
+
 
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {

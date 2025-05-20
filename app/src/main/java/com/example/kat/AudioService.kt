@@ -55,10 +55,38 @@ class AudioService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("AudioServiceLifecycle", "AudioService onStartCommand")
-        // Aquí es donde normalmente iniciarías el foreground service con una notificación
-        // Lo haré en playAudio para asegurar que la notificación tenga sentido
-        return START_STICKY // O START_NOT_STICKY si no quieres que se reinicie automáticamente
+        Log.d("AudioService", "onStartCommand: Comando recibido. Intent action: ${intent?.action}")
+
+        // Aquí es donde decides si el servicio necesita pasar a primer plano.
+        // Por ejemplo, si el intent es para reproducir audio:
+        // if (intent?.action == "PLAY_ACTION" || /* otra condición para reproducir */) {
+
+        // --- INICIO DE LA SECCIÓN CRÍTICA ---
+        val notificationText = "Procesando audio..." // O un texto más descriptivo si ya sabes qué audio es
+        // Si ya tienes información del audio desde el intent, úsala.
+
+        val notification = createNotification(notificationText, exoPlayer.isPlaying)
+
+        try {
+            Log.d("AudioService", "Llamando a startForeground...")
+            startForeground(NOTIFICATION_ID, notification) // ¡ESTA ES LA LLAMADA CLAVE!
+            Log.d("AudioService", "startForeground llamado exitosamente.")
+        } catch (e: Exception) {
+            Log.e("AudioService", "Error al llamar a startForeground: ${e.message}", e)
+            // Considera detener el servicio si no puede pasar a primer plano y es un requisito
+            // stopSelf()
+        }
+        // --- FIN DE LA SECCIÓN CRÍTICA ---
+
+        // } // Fin del if (intent?.action == "PLAY_ACTION")
+
+        // Tu lógica para manejar el intent, iniciar la reproducción, etc.
+        // Ejemplo:
+        // val audioFile = intent?.getSerializableExtra("AUDIO_FILE_EXTRA") as? File
+        // audioFile?.let { playAudio(it) }
+
+        // Política de reinicio del servicio
+        return START_STICKY
     }
 
     fun playAudio(file: File) {
@@ -144,6 +172,7 @@ class AudioService : Service() {
 
     private fun createNotification(contentText: String, isPlaying: Boolean): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
+        notificationIntent.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         val pendingIntentFlags =
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingIntentFlags)
